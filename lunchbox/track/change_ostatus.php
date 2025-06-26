@@ -53,6 +53,9 @@ if (mysqli_num_rows($status_res) == 0) {
 echo "<tr id='row$pid'>
         <td>
                 Picked up at <i class='fa fa-clock' style='font-size:10px;'></i> $pickup_time<br>
+                <div style='font-size:12px;'>Call Parent @<br>
+                    <a href='tel:$pid'><i class='fa fa-phone'></i> $pid</a>
+                </div>
         </td>
       </tr>";
 ?>
