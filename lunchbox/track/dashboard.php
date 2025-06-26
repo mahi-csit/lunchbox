@@ -34,6 +34,18 @@
             <header class="page-header">
                 <h2>BO LUNCH BOX</h2>
             </header>
+
+            <?php
+            if (isset($_SESSION['drop_messages']) && is_array($_SESSION['drop_messages'])) {
+                echo "<div class='alert alert-success'>";
+                foreach ($_SESSION['drop_messages'] as $msg) {
+                    echo "<div>$msg</div>";
+                }
+                echo "</div>";
+                unset($_SESSION['drop_messages']);
+            }
+            ?>
+
             <div class='row'>
                 <div class="col-xl-9">
                     <h5 class="font-weight-semibold text-dark text-uppercase mb-3 mt-3">My Lunch Boxes</h5>
@@ -65,11 +77,18 @@ while ($row = mysqli_fetch_array($subs_res)) {
 
     $status_res = mysqli_query($conn, "SELECT * FROM trips WHERE date='$today' AND pid='$pid' AND school='$school'");
     $status = 0;
+    $dropped = 0;
 
     if (mysqli_num_rows($status_res) > 0) {
         $srow = mysqli_fetch_array($status_res);
-        $pickup_time = date('g:i A', strtotime($srow['pickup_time']));
-        $status = 1;
+        if (!empty($srow['pickup_time'])) {
+            $status = 1;
+            $pickup_time = date('g:i A', strtotime($srow['pickup_time']));
+        }
+        if (!empty($srow['drop_time'])) {
+            $dropped = 1;
+            $drop_time = date('g:i A', strtotime($srow['drop_time']));
+        }
     }
 
     echo ($status == 0 && !$first_unpicked) ? "<tr id='scrollTarget'>" : "<tr>";
@@ -79,25 +98,25 @@ while ($row = mysqli_fetch_array($subs_res)) {
           <div style='font-size:10px;line-height:10px;'>$address</div></td>";
     $sno++;
 
+    echo "<td id='gerr$pid'>";
     if ($status == 0) {
-        echo "<td id='gerr$pid' style='width: 30%'>
-                <a href='#' onclick='change_status($pid,$school);'>
-                    <button type='button' class='mb-1 mt-1 mr-1 btn btn-xs btn-success'>PICK</button>
-                </a>
-                <div style='font-size:12px;'>Call Parent @<br>
-                    <a href='tel:$pid'><i class='fa fa-phone'></i> $pid</a>
-                </div>
-              </td>";
+        echo "<a href='#' onclick='change_status($pid,\"$school\");'>
+                <button type='button' class='mb-1 mt-1 mr-1 btn btn-xs btn-success'>PICK</button>
+              </a>
+              <div style='font-size:12px;'>Call Parent @<br>
+                <a href='tel:$pid'><i class='fa fa-phone'></i> $pid</a>
+              </div>";
     } else {
-        echo "<td id='gerr$pid'>
-                <div style='font-size:10px;'>Picked up at <i class='fa fa-clock' style='font-size:10px;'></i> $pickup_time</div>
-                <div style='font-size:12px;'>Call Parent @<br>
-                    <a href='tel:$pid'><i class='fa fa-phone'></i> $pid</a>
-                </div>
-              </td>";
+        if ($dropped) {
+            echo "<div style='font-size:10px;'>Dropped at <i class='fa fa-clock'></i> $drop_time Successfully</div>";
+        } else {
+            echo "<div style='font-size:10px;'>Picked up at <i class='fa fa-clock'></i> $pickup_time</div>";
+        }
+        echo "<div style='font-size:12px;'>Call Parent @<br>
+                <a href='tel:$pid'><i class='fa fa-phone'></i> $pid</a>
+              </div>";
     }
-
-    echo "</tr>";
+    echo "</td></tr>";
 }
 ?>
                                 </tbody>
@@ -105,11 +124,13 @@ while ($row = mysqli_fetch_array($subs_res)) {
                         </div>
                     </section>
                 </div>
+
                 <div class="col-xl-3">
                     <h5 class="font-weight-semibold text-dark text-uppercase mb-3 mt-3">Today's Deliveries</h5>
                     <section class="card mt-4" style='height:350px;'>
                         <div class="card-body"><br>
                             <ul class="simple-bullet-list mb-3" id='my_games'>
+
 <?php
 $total_res = mysqli_query($conn, "SELECT pid FROM subscriptions");
 $picked_res = mysqli_query($conn, "SELECT * FROM trips WHERE date='$today' AND pickup_time IS NOT NULL AND drop_time IS NULL");
@@ -124,6 +145,14 @@ echo "<h1 style='color:blue;'><b>$total</b></h1>Subscriptions";
 echo "<h1 style='color:orange;'><b>$picked</b></h1>In Transit";
 echo "<h1 style='color:red;'><b>$no_picked</b></h1>Not Picked Up";
 echo "<h1 style='color:green;'><b>$delivered</b></h1>Delivered";
+
+if ($_SESSION['mobile'] === '9010872333') {
+    echo "<form method='post' action='drop_all.php'>
+            <button type='submit' class='btn btn-danger btn-sm mt-2'>
+                <i class='fa fa-truck'></i> DROP ALL
+            </button>
+          </form>";
+}
 ?>
                             </ul>
                         </div>
@@ -165,13 +194,22 @@ window.onload = function () {
 
 function change_status(pid, school) {
     const er = "gerr" + pid;
+    const currentRow = document.getElementById(er).closest("tr");
+
     const xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function () {
         if (xhr.readyState === 1) {
-            document.getElementById(er).innerHTML = "Updating..";
+            document.getElementById(er).innerHTML = "Updating...";
         }
         if (xhr.readyState === 4 && xhr.status === 200) {
             document.getElementById(er).innerHTML = xhr.responseText;
+
+            setTimeout(() => {
+                const nextRow = currentRow?.nextElementSibling;
+                if (nextRow) {
+                    nextRow.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+            }, 100);
         }
     };
     xhr.open("GET", "change_ostatus.php?pid=" + pid + "&school=" + school, true);
