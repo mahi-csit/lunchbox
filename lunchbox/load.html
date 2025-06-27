@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pickup & Drop Progress</title>
+  <style>
+    body {
+      background: #121212;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .progress-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      width: 80%;
+      max-width: 500px;
+    }
+
+    .icon {
+      font-size: 1.5em;
+    }
+
+    .loading-container {
+      flex: 1;
+      height: 20px;
+      background: #333;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 10px #00FFAA55;
+    }
+
+    .loading-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(to right, #00FFAA, #00ffaa90);
+      transition: width 1s linear, background-color 0.5s ease;
+    }
+
+    .loading-bar.completed {
+      background: linear-gradient(to right, #1E90FF, #63b3ff); /* blue */
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+
+    input[type="time"] {
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: none;
+      font-size: 1em;
+      background: #eee;
+      color: #000;
+    }
+
+    button {
+      background: #00ffaa;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: bold;
+      transition: background 0.2s ease;
+    }
+
+    button:hover {
+      background: #00cc88;
+    }
+
+    .completed-popup {
+      display: none;
+      margin-top: 20px;
+      font-size: 1.8em;
+      color: #1E90FF;
+      animation: popIn 1s ease forwards;
+    }
+
+    @keyframes popIn {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1.1);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="progress-wrapper">
+    <div class="icon">🏠</div>
+    <div class="loading-container">
+      <div class="loading-bar" id="loadingBar"></div>
+    </div>
+    <div class="icon">🏫</div>
+  </div>
+
+  <div class="controls">
+    <button onclick="startPickup()">Pick</button>
+    <input type="time" id="dropTime" />
+    <button onclick="forceDrop()">Drop</button>
+  </div>
+
+  <div class="completed-popup" id="completedPopup">✅ Completed!</div>
+
+  <script>
+    const loadingBar = document.getElementById("loadingBar");
+    const completedPopup = document.getElementById("completedPopup");
+    const dropTimeInput = document.getElementById("dropTime");
+
+    let pickupTime = null;
+    let interval = null;
+
+    function startPickup() {
+      clearInterval(interval);
+      loadingBar.classList.remove("completed");
+      loadingBar.style.width = "5%";
+      completedPopup.style.display = "none";
+
+      pickupTime = new Date();
+
+      interval = setInterval(() => {
+        const dropValue = dropTimeInput.value;
+        if (!dropValue) return; // wait until user inputs drop time
+
+        const [dh, dm] = dropValue.split(":").map(Number);
+        const now = new Date();
+        const dropTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), dh, dm);
+
+        const totalDuration = dropTime - pickupTime;
+        const elapsed = new Date() - pickupTime;
+
+        if (totalDuration <= 0) return; // invalid or past time
+
+        let progress = 5 + ((elapsed / totalDuration) * 94);
+        progress = Math.min(progress, 99);
+        loadingBar.style.width = progress + "%";
+
+        if (progress >= 99) clearInterval(interval);
+      }, 1000);
+    }
+
+    function forceDrop() {
+      clearInterval(interval);
+      loadingBar.style.width = "100%";
+      loadingBar.classList.add("completed");
+      completedPopup.style.display = "block";
+      completedPopup.style.animation = "popIn 0.7s ease forwards";
+    }
+  </script>
+</body>
+</html>
